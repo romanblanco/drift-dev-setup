@@ -7,8 +7,8 @@ echo "Checking for reserved namespace"
 export NAMESPACE=$(bonfire namespace list --mine | grep "ephemeral" | awk '{print $1"|"$2}' | grep '|true' | awk -F'|' '{print $1}' | head -n1) # we use the first one available
 
 if [[ $NAMESPACE == *"ephemeral-"* ]]; then
-    echo "Namespace $NAMESPACE reserved, extending for 2 hours"    
-    bonfire namespace extend $NAMESPACE -d '2h0m' 
+    echo "Namespace $NAMESPACE reserved, extending for 2 hours"
+    bonfire namespace extend $NAMESPACE -d '2h0m'
 else
     echo "Reserving namespace for 2 hours"
     export NAMESPACE=$(bonfire namespace reserve -d '2h0m')
@@ -19,6 +19,15 @@ echo "Using $NAMESPACE as default oc project"
 oc project $NAMESPACE
 
 echo "Deploying apps to $NAMESPACE"
-bonfire deploy drift -n $NAMESPACE
+bonfire --debug \
+	deploy \
+	--local-config-path ~/.config/bonfire/drift-config.yaml \
+	--no-remove-resources drift \
+	--no-remove-resources system-baseline \
+	--no-remove-resources historical-system-profiles \
+	--frontends true \
+	drift advisor host-inventory rbac \
+	-n $NAMESPACE
+#bonfire deploy drift -n $NAMESPACE
 
 sh ./clowder/clowder-port-forward.sh
